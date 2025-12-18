@@ -822,6 +822,61 @@
     wireBoxRules();
   };
   wireBoxRules();
+  async function submitInspection(){
+    if(!confirm('Submit this inspection now?')) return;
+
+    const customerName = (document.getElementById('customerName')?.value || '').trim();
+    const location = (document.getElementById('location')?.value || '').trim();
+    const inspectedBy = (document.getElementById('inspectedBy')?.value || '').trim();
+
+    if(!customerName || !location || !inspectedBy){
+      alert('Please fill Customer Name, Location, and Inspection performed by.');
+      return;
+    }
+
+    const btn = document.getElementById('btnSubmitInspection');
+    const old = btn ? btn.textContent : '';
+    if(btn){ btn.disabled = true; btn.textContent = 'Submitting...'; }
+
+    try{
+      // customer report HTML = full report (non-tech)
+      const customer_report_html = buildFullReportDoc(false);
+
+      // tech report HTML = full report (tech)
+      const tech_report_html = buildFullReportDoc(true);
+
+      const res = await fetch('/.netlify/functions/submit-inspection', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          customer_name: customerName,
+          location: location,
+          performed_by: inspectedBy,
+          duration_minutes: 0,
+          customer_report_html,
+          tech_report_html
+        })
+      });
+
+      const text = await res.text().catch(()=>'');
+
+      if(!res.ok){
+        alert('Submit failed:\n' + (text || ('HTTP ' + res.status)));
+        return;
+      }
+
+      alert('Form submitted successfully!');
+      setTimeout(() => { window.location.href = 'customerapp.html'; }, 1500);
+
+    }catch(e){
+      alert('Submit error:\n' + (e?.message || e));
+    }finally{
+      if(btn){ btn.disabled = false; btn.textContent = old; }
+    }
+  }
+
+  // expose it so the onclick button can call it
+  window.submitInspection = submitInspection;
 
 })();
 </script>
