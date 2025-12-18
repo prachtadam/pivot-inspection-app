@@ -886,9 +886,9 @@ function submitInspection() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      customer_name: "TEMP CUSTOMER",
-      location: "TEMP LOCATION",
-      performed_by: "TEMP TECH"
+      customer_name: "customerName",
+      location: "location",
+      performed_by: "inspectedBy"
     })
   })
     .then(r => r.json())
