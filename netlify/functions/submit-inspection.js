@@ -1,4 +1,4 @@
-// netlify/functions/submit-test.js
+// netlify/functions/submit-inspection.js
 
 exports.handler = async (event) => {
   try {
@@ -8,20 +8,19 @@ exports.handler = async (event) => {
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SERVICE_KEY =
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY; // fallback
+    const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!SUPABASE_URL || !SERVICE_KEY) {
       return {
         statusCode: 500,
         body: JSON.stringify({
           error:
-            "Missing env vars. Need SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_KEY fallback).",
+            "Missing env vars. Need SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
         }),
       };
     }
 
-    // Parse body safely
+    // Parse JSON body
     let data;
     try {
       data = event.body ? JSON.parse(event.body) : {};
@@ -29,10 +28,13 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
     }
 
-    // Example insert payload (you can change to match your table columns)
-    // If you're already sending the full inspection object, you can just use `data`.
-    const payload = data && Object.keys(data).length ? data : { test: true, created_at: new Date().toISOString() };
+    // TEMP: insert whatever you send (we’ll adjust after we see your table requirements)
+    const payload =
+      data && Object.keys(data).length
+        ? data
+        : { test: true, created_at: new Date().toISOString() };
 
+    // IMPORTANT: table name here (we can change later if needed)
     const url = `${SUPABASE_URL}/rest/v1/inspections`;
 
     const insertRes = await fetch(url, {
@@ -51,7 +53,7 @@ exports.handler = async (event) => {
     try {
       json = text ? JSON.parse(text) : null;
     } catch {
-      json = text; // sometimes Supabase returns empty or non-JSON
+      json = text;
     }
 
     if (!insertRes.ok) {
