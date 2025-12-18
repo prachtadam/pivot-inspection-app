@@ -30,9 +30,8 @@ exports.handler = async (event) => {
 
     // TEMP: insert whatever you send (we’ll adjust after we see your table requirements)
     const payload =
-      data && Object.keys(data).length
-        ? data
-        : { test: true, created_at: new Date().toISOString() };
+     const payload = data && Object.keys(data).length ? data : {};
+
 
     // IMPORTANT: table name here (we can change later if needed)
     const url = `${SUPABASE_URL}/rest/v1/inspections`;
