@@ -880,5 +880,27 @@
 
 })();
 </script>
+<script>
+function submitInspection() {
+  fetch("/.netlify/functions/submit-inspection", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      customer_name: "TEMP CUSTOMER",
+      location: "TEMP LOCATION",
+      performed_by: "TEMP TECH"
+    })
+  })
+    .then(r => r.json())
+    .then(data => {
+      console.log("Saved:", data);
+      alert("Inspection saved!");
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error saving inspection");
+    });
+}
+</script>
 </body>
 </html>
