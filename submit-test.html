@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Submit Test</title>
+  <style>
+    body{font-family:Arial,sans-serif; max-width:720px; margin:20px auto; padding:0 12px;}
+    label{display:block; margin-top:10px; font-weight:bold;}
+    input, textarea{width:100%; padding:10px; margin-top:6px; box-sizing:border-box;}
+    button{padding:10px 14px; margin-top:14px; cursor:pointer;}
+    pre{background:#111; color:#0f0; padding:12px; white-space:pre-wrap; border-radius:8px;}
+  </style>
+</head>
+<body>
+  <h2>Netlify Submit Test</h2>
+
+  <label>Customer Name</label>
+  <input id="customerName" placeholder="Adam Farms" />
+
+  <label>Location</label>
+  <input id="location" placeholder="Field 12 / Ord NE" />
+
+  <label>Performed By</label>
+  <input id="performedBy" placeholder="Adam" />
+
+  <button id="btn">Submit Inspection</button>
+
+  <h3>Result</h3>
+  <pre id="out">Waiting…</pre>
+
+  <script>
+    const out = (msg) => document.getElementById('out').textContent = String(msg);
+
+    document.getElementById('btn').addEventListener('click', async () => {
+      if(!confirm('Submit this inspection now?')) return;
+
+      const customer_name = document.getElementById('customerName').value.trim();
+      const location = document.getElementById('location').value.trim();
+      const performed_by = document.getElementById('performedBy').value.trim();
+
+      if(!customer_name || !location || !performed_by){
+        alert('Fill in Customer Name, Location, and Performed By.');
+        return;
+      }
+
+      out('Submitting…');
+
+      try{
+        const res = await fetch('/.netlify/functions/submit-inspection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_name,
+            location,
+            performed_by,
+            duration_minutes: 0,
+            customer_report_html: "<h1>Customer Report Test</h1><p>Hello</p>",
+            tech_report_html: "<h1>Tech Report Test</h1><p>Hello</p>"
+          })
+        });
+
+        const text = await res.text().catch(()=>'');
+
+        out(`HTTP ${res.status}\n\n${text}`);
+
+        if(!res.ok){
+          alert('Submit failed. See Result box.');
+          return;
+        }
+
+        alert('Form submitted successfully!');
+      }catch(e){
+        out('ERROR:\n' + (e?.message || e));
+        alert('Submit error. See Result box.');
+      }
+    });
+  </script>
+</body>
+</html>
