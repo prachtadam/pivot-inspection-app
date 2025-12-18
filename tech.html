@@ -764,7 +764,7 @@
 </body></html>`;
   }
 
-  async function submitInspection(){
+  window.submitInspection = async function(){
     alert('Submit button clicked');
     if(!confirm('Submit this inspection now?')) return;
 
