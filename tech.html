@@ -826,7 +826,7 @@
     if(!confirm('Submit this inspection now?')) return;
 
     const customerName = (document.getElementById('customerName')?.value || '').trim();
-    const location = (document.getElementById('location')?.value || '').trim();
+    const location = (document.getElementById('locationInput')?.value || '').trim();
     const inspectedBy = (document.getElementById('inspectedBy')?.value || '').trim();
 
     if(!customerName || !location || !inspectedBy){
@@ -850,7 +850,7 @@
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           customer_name: customerName,
-          location: location,
+          location: locationInput,
           performed_by: inspectedBy,
           duration_minutes: 0,
           customer_report_html,
