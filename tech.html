@@ -157,7 +157,7 @@
 </div>
 
 <!-- Tower template + component card + report modal identical to your working app -->
-
+<!-- To keep this message readable, I’m using the same tower template and JS logic as your working file. -->
 <!-- ✅ IMPORTANT: You already have these working. We will not alter tower positions. -->
 
 <template id="towerTemplate">
@@ -765,7 +765,7 @@
   }
 
   async function submitInspection(){
-    const ok = confirm(\'Submit this inspection now?\');
+    const ok = confirm('Submit this inspection now?');
     if(!ok) return;
 
     const data = gatherFormData();
@@ -775,13 +775,17 @@
     }
 
     const duration_minutes = getDurationMinutes();
-    const customer_report_html = buildCustomerReport(data, true); // All towers
+
+    // Use your existing report builders (keeps tower layout intact)
+    const customer_report_html = buildFullReportDoc(false); // All towers
     const tech_report_html = buildTechReport(data);
 
     const btn = document.getElementById('btnSubmitInspection');
-    btn.disabled = true;
-    const old = btn.textContent;
-    btn.textContent = 'Submitting...';
+    if(btn){
+      btn.disabled = true;
+      var oldText = btn.textContent;
+      btn.textContent = 'Submitting...';
+    }
 
     try{
       const res = await fetch('/.netlify/functions/submit-inspection', {
@@ -796,23 +800,34 @@
           tech_report_html
         })
       });
+
+      const ct = (res.headers.get('content-type')||'').toLowerCase();
+      const payload = ct.includes('application/json') ? await res.json() : await res.text();
+
       if(!res.ok){
-        const t = await res.text();
-        throw new Error(t || 'Submit failed');
+        const msg = (typeof payload === 'string' && payload) ? payload : (payload && payload.error) ? payload.error : 'Submit failed';
+        throw new Error(msg);
       }
-      const j = await res.json();
-      const num = j.inspection_number;
+
+      // Try to populate inspection number if the function returns it
+      const num = (payload && typeof payload === 'object') ? payload.inspection_number : null;
       const inp = document.getElementById('inspectionNumber');
-      if(inp) inp.value = num ? String(num) : '';
-      alert('Form submitted successfully!');
-      setTimeout(function(){ window.location.href = 'customerapp.html'; }, 1500);
+      if(inp && num!=null) inp.value = String(num);
+
+      alert('Form submitted successfully' + (num!=null ? ('! Inspection #' + num) : '!'));
+
+      setTimeout(()=>{ window.location.href = 'customerapp.html'; }, 1500);
+
     }catch(e){
-      alert('❌ Submit failed:\n' + (e?.message || e));
+      alert('Submit failed:\n' + (e?.message || e));
     }finally{
-      btn.disabled = false;
-      btn.textContent = old;
+      if(btn){
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
     }
   }
+
 
   document.getElementById('btnSubmitInspection')?.addEventListener('click', submitInspection);
 
