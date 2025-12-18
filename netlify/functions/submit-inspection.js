@@ -1,6 +1,9 @@
 // netlify/functions/submit-inspection.js
 
 exports.handler = async (event) => {
+ console.log("ENV HAS SUPABASE_KEY:", !!process.env.SUPABASE_KEY);
+ console.log("RAW BODY:", event.body);
+
   try {
     if (event.httpMethod !== "POST") {
       return { statusCode: 405, body: "Method Not Allowed" };
@@ -86,6 +89,8 @@ exports.handler = async (event) => {
       "text/html"
     );
     await uploadToBucket("tech-reports", tech_path, tech_report_html, "text/html");
+console.log("SUPABASE_URL:", SUPABASE_URL);
+console.log("INSERT PAYLOAD:", payload);
 
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/inspections`, {
       method: "POST",
@@ -105,9 +110,22 @@ exports.handler = async (event) => {
       }),
     });
 
-    if (!insertRes.ok) {
-      const t = await insertRes.text();
-      throw new Error(`DB insert failed: ${insertRes.status} ${t}`);
+   if (!insertRes.ok) {
+  const errText = await insertRes.text();
+  console.log("SUPABASE INSERT FAILED:", insertRes.status, errText);
+
+  return {
+    statusCode: 500,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ok: false,
+      status: insertRes.status,
+      error: errText
+    })
+  };
+}
+
+     
     }
 
     const rows = await insertRes.json();
