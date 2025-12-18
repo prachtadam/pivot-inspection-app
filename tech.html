@@ -152,10 +152,13 @@
   <div id="towersContainer"></div>
 
   <div class="section-card">
-    <div class="report-actions" style="margin-top:14px;"><button class="btn bad" type="button" id="btnSubmitInspection">Submit Inspection</button></div>
+    <div class="report-actions" style="margin-top:14px;"><button class="btn bad" type="button" id="btnSubmitInspection" onclick="submitInspection()">Submit Inspection</button></div>
   </div>
 </div>
 
+<!-- Tower template + component card + report modal identical to your working app -->
+<!-- To keep this message readable, I’m using the same tower template and JS logic as your working file. -->
+<!-- ✅ IMPORTANT: You already have these working. We will not alter tower positions. -->
 
 <template id="towerTemplate">
   <div class="section-card tower-section">
@@ -413,44 +416,37 @@
   });
 
   function gatherFormData(){
-    const val = (id) => (document.getElementById(id)?.value ?? '');
-    const data = {
-      customerName: val('customerName'),
-      systemBrand: val('systemBrand'),
-      inspectedBy: val('inspectedBy'),
-      fieldName: val('fieldName'),
-      location: val('locationInput'),
-      inspectionDate: val('inspectionDate'),
-      machineHours: val('machineHours'),
-      startTime: val('startTime'),
-      endTime: val('endTime'),
-      serialNumber: val('serialNumber'),
-      inspectionNumber: val('inspectionNumber'),
+    const data={
+      customerName:document.getElementById('customerName').value||'',
+      systemBrand:document.getElementById('systemBrand').value||'',
+      inspectedBy:document.getElementById('inspectedBy').value||'',
+      fieldName:document.getElementById('fieldName').value||'',
+      location:document.getElementById('locationInput').value||'',
+      inspectionDate:document.getElementById('inspectionDate').value||'',
+      machineHours:document.getElementById('machineHours').value||'',
+      startTime:document.getElementById('startTime').value||'',
+      endTime:document.getElementById('endTime').value||'',
       notes:{
-        wellMotorOil: val('wellMotorOil'),
-        dripOilSystem: val('dripOilSystem'),
-        wellPanel: val('WellPanel'),
-        waterSupply: val('waterSupply'),
-        mainControlPanel: val('mainControlPanel'),
-        pivotFoundation: val('pivotFoundation'),
-        anchoringSystem: val('anchoringSystem'),
-        centerPointStructure: val('centerPointStructure'),
-        collectorRing: val('collectorRing'),
-        towerBootNote: val('towerBootNote'),
+        wellMotorOil:document.getElementById('wellMotorOil').value||'',
+        dripOilSystem:document.getElementById('dripOilSystem').value||'',
+        wellPanel:document.getElementById('WellPanel').value||'',
+        waterSupply:document.getElementById('waterSupply').value||'',
+        mainControlPanel:document.getElementById('mainControlPanel').value||'',
+        pivotFoundation:document.getElementById('pivotFoundation').value||'',
+        anchoringSystem:document.getElementById('anchoringSystem').value||'',
+        centerPointStructure:document.getElementById('centerPointStructure').value||'',
+        collectorRing:document.getElementById('collectorRing').value||'',
+        towerBootNote:document.getElementById('towerBootNote').value||'',
       },
       towers:[]
     };
-
     towersContainer.querySelectorAll('.tower-section').forEach(section=>{
-      const towerId = parseInt(section.dataset.towerId,10);
-      const comment = section.querySelector('.tower-comment')?.value || '';
+      const towerId=parseInt(section.dataset.towerId,10);
+      const comment=section.querySelector('.tower-comment')?.value||'';
       data.towers.push({id:towerId, comment, components: selections[towerId]||{}});
     });
-
     return data;
   }
-
-}
 
   function escapeHtml(str){
     return String(str).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
@@ -564,8 +560,8 @@
   closeReportModalBtn.addEventListener('click', closeReportModal);
   reportModalBackdrop.addEventListener('click',(e)=>{ if(e.target===reportModalBackdrop) closeReportModal(); });
 
-  btnCustomerAll?.addEventListener('click',()=>openReportModal('all'));
-  btnCustomerProblems?.addEventListener('click',()=>openReportModal('problems'));
+  btnCustomerAll.addEventListener('click',()=>openReportModal('all'));
+  btnCustomerProblems.addEventListener('click',()=>openReportModal('problems'));
 
   btnOpenPrintable.addEventListener('click',()=>{
     const doc=buildFullReportDoc(reportMode==='problems');
@@ -768,9 +764,8 @@
 </body></html>`;
   }
 
-    async function submitInspection(){
-    const sure = confirm('Submit this inspection now?');
-    if(!sure) return;
+  async function submitInspection(){
+    if(!confirm('Submit this inspection now?')) return;
 
     const data = gatherFormData();
     if(!data.customerName || !data.location || !data.inspectedBy){
@@ -779,20 +774,18 @@
     }
 
     const duration_minutes = getDurationMinutes();
-    const customer_report_html = buildFullReportDoc(false); // All towers
+    const customer_report_html = buildCustomerReport(data, true); // All towers
     const tech_report_html = buildTechReport(data);
 
     const btn = document.getElementById('btnSubmitInspection');
-    if(btn){
-      btn.disabled = true;
-      var old = btn.textContent;
-      btn.textContent = 'Submitting...';
-    }
+    btn.disabled = true;
+    const old = btn.textContent;
+    btn.textContent = 'Submitting...';
 
     try{
       const res = await fetch('/.netlify/functions/submit-inspection', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           customer_name: data.customerName,
           location: data.location,
@@ -802,48 +795,34 @@
           tech_report_html
         })
       });
-
-      let payloadText = '';
-      try{ payloadText = await res.text(); }catch(e){}
-
       if(!res.ok){
-        console.error('Submit failed', res.status, payloadText);
-        alert('Submit failed (' + res.status + ').\n\n' + payloadText);
-        return;
+        const t = await res.text();
+        throw new Error(t || 'Submit failed');
       }
-
-      // If the function returns an inspection number, try to show it
-      let num = '';
-      try{
-        const maybe = JSON.parse(payloadText);
-        if(maybe && (maybe.inspection_number || maybe.inspectionNumber || maybe.number)){
-          num = String(maybe.inspection_number || maybe.inspectionNumber || maybe.number);
-        }
-      }catch(e){}
-
-      alert('Form submitted successfully' + (num ? ('! Inspection #' + num) : '!'));
-
-      setTimeout(() => {
-        window.location.href = 'customerapp.html';
-      }, 1500);
-
-    }catch(e){
-      console.error(e);
-      alert('Submit failed:\n' + (e?.message || e));
+      const j = await res.json();
+      const num = j.inspection_number;
+      const inp = document.getElementById('inspectionNumber');
+      if(inp) inp.value = num ? String(num) : '';
+      alert('Form submitted successfully! Inspection #' + (num ?? ''));
+      setTimeout(()=>{ window.location.href = 'customerapp.html'; }, 1500);
+}catch(e){
+      alert('❌ Submit failed:\n' + (e?.message || e));
     }finally{
-      if(btn){
-        btn.disabled = false;
-        btn.textContent = old || 'Submit Inspection';
-      }
+      btn.disabled = false;
+      btn.textContent = old;
     }
   }
 
-  // Wire the button to submit
-  const submitBtn = document.getElementById('btnSubmitInspection');
-  if(submitBtn){
-    submitBtn.addEventListener('click', submitInspection);
-  }
-})(); 
+  document.getElementById('btnSubmitInspection')?.addEventListener('click', submitInspection);
+
+  const _origRender = renderTowers;
+  renderTowers = function(){
+    _origRender();
+    wireBoxRules();
+  };
+  wireBoxRules();
+
+})();
 </script>
 </body>
 </html>
