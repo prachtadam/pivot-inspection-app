@@ -764,15 +764,7 @@
 </body></html>`;
   }
 
-  window.submitInspection = async function(){
-    alert('Submit button clicked');
-    if(!confirm('Submit this inspection now?')) return;
 
-    const data = gatherFormData();
-    if(!data.customerName || !data.location || !data.inspectedBy){
-      alert('Please fill Customer Name, Location, and Inspection performed by.');
-      return;
-    }
 
     const duration_minutes = getDurationMinutes();
     const customer_report_html = buildCustomerReport(data, true); // All towers
@@ -822,17 +814,7 @@
     wireBoxRules();
   };
   wireBoxRules();
-  async function submitInspection(){
-    if(!confirm('Submit this inspection now?')) return;
-
-    const customerName = (document.getElementById('customerName')?.value || '').trim();
-    const location = (document.getElementById('locationInput')?.value || '').trim();
-    const inspectedBy = (document.getElementById('inspectedBy')?.value || '').trim();
-
-    if(!customerName || !location || !inspectedBy){
-      alert('Please fill Customer Name, Location, and Inspection performed by.');
-      return;
-    }
+  
 
     const btn = document.getElementById('btnSubmitInspection');
     const old = btn ? btn.textContent : '';
@@ -876,23 +858,13 @@
   }
 
   // expose it so the onclick button can call it
-  window.submitInspection = submitInspection;
+
 
 })();
 </script>
 <script>
 <script>
-async function submitInspection() {
-  if (!confirm("Submit this inspection now?")) return;
 
-  const customerName = (document.getElementById("customerName")?.value || "").trim();
-  const location = (document.getElementById("locationInput")?.value || "").trim();
-  const inspectedBy = (document.getElementById("inspectedBy")?.value || "").trim();
-
-  if (!customerName || !location || !inspectedBy) {
-    alert("Please fill Customer Name, Location, and Inspection performed by.");
-    return;
-  }
 
   const res = await fetch("/.netlify/functions/submit-inspection", {
     method: "POST",
@@ -915,6 +887,37 @@ async function submitInspection() {
 }
 </script>
 
+</script>
+<script>
+window.submitInspection = async function () {
+  if (!confirm("Submit this inspection now?")) return;
+
+  const customerName = document.getElementById("customerName").value.trim();
+  const location = document.getElementById("locationInput").value.trim();
+  const inspectedBy = document.getElementById("inspectedBy").value.trim();
+
+  if (!customerName || !location || !inspectedBy) {
+    alert("Please fill Customer Name, Location, and Inspection performed by.");
+    return;
+  }
+
+  const res = await fetch("/.netlify/functions/submit-inspection", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      customer_name: customerName,
+      location: location,
+      performed_by: inspectedBy
+    })
+  });
+
+  if (!res.ok) {
+    alert("Submit failed");
+    return;
+  }
+
+  alert("Inspection saved!");
+};
 </script>
 </body>
 </html>
