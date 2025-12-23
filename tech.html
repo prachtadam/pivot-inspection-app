@@ -267,21 +267,6 @@
   const useLocationBtn = document.getElementById('useLocationBtn');
   const locationInput = document.getElementById('locationInput');
 
-
-  if (useLocationBtn && locationInput) {
-    useLocationBtn.addEventListener('click', () => {
-      if (!navigator.geolocation) { alert('Geolocation not supported.'); return; }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          locationInput.value = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-        },
-        () => alert('Unable to get current location.'),
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    });
-  }
-
   const reportModalBackdrop = document.getElementById('reportModalBackdrop');
   const reportModalTitle = document.getElementById('reportModalTitle');
   const closeReportModalBtn = document.getElementById('closeReportModalBtn');
@@ -775,14 +760,19 @@
 
 
 
+    
+  async function submitInspection() {
+    if (!confirm('Submit this inspection now?')) return;
+
+    const data = gatherFormData();
+
     const duration_minutes = getDurationMinutes();
     const customer_report_html = buildCustomerReport(data, true); // All towers
     const tech_report_html = buildTechReport(data);
 
     const btn = document.getElementById('btnSubmitInspection');
-    btn.disabled = true;
-    const old = btn.textContent;
-    btn.textContent = 'Submitting...';
+    const old = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
 
     try{
       const res = await fetch('/.netlify/functions/submit-inspection', {
@@ -797,25 +787,38 @@
           tech_report_html
         })
       });
+
+      const text = await res.text().catch(()=>'');
+
       if(!res.ok){
-        const t = await res.text();
-        throw new Error(t || 'Submit failed');
+        alert('Submit failed:\n' + (text || ('HTTP ' + res.status)));
+        return;
       }
-      const j = await res.json();
-      const num = j.inspection_number;
-      const inp = document.getElementById('inspectionNumber');
-      if(inp) inp.value = num ? String(num) : '';
-      alert('Form submitted successfully! Inspection #' + (num ?? ''));
-      setTimeout(()=>{ window.location.href = 'customerapp.html'; }, 1500);
-}catch(e){
+
+      // try to parse response and show inspection number if present
+      try{
+        const json = JSON.parse(text);
+        if (json?.inspection_number){
+          alert('Form submitted successfully! Inspection #' + json.inspection_number);
+        } else {
+          alert('Form submitted successfully!');
+        }
+      }catch(_){
+        alert('Form submitted successfully!');
+      }
+
+      setTimeout(() => { window.location.href = 'customerapp.html'; }, 1500);
+    }catch(e){
       alert('❌ Submit failed:\n' + (e?.message || e));
     }finally{
-      btn.disabled = false;
-      btn.textContent = old;
+      if(btn){ btn.disabled = false; btn.textContent = old; }
     }
   }
 
-  document.getElementById('btnSubmitInspection')?.addEventListener('click', submitInspection);
+  // expose it so the inline onclick works
+  window.submitInspection = submitInspection;
+
+document.getElementById('btnSubmitInspection')?.addEventListener('click', submitInspection);
 
   const _origRender = renderTowers;
   renderTowers = function(){
@@ -869,65 +872,32 @@
   // expose it so the onclick button can call it
 
 
-
-  window.submitInspection = async function () {
-    if (!confirm('Submit this inspection now?')) return;
-
-    const data = gatherFormData();
-    const duration_minutes = getDurationMinutes();
-
-    if (!data.customerName || !data.location || !data.inspectedBy) {
-      alert('Please fill Customer Name, Location, and Inspection performed by.');
-      return;
-    }
-
-    const btn = document.getElementById('btnSubmitInspection');
-    const old = btn ? btn.textContent : '';
-    if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
-
-    try {
-      const customer_report_html = buildFullReportDoc(false);
-      const tech_report_html = buildTechReport(data);
-
-      const res = await fetch('/.netlify/functions/submit-inspection', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customer_name: data.customerName,
-          location: data.location,
-          performed_by: data.inspectedBy,
-          duration_minutes,
-          customer_report_html,
-          tech_report_html
-        })
-      });
-
-      const text = await res.text().catch(()=>'');
-      let json = null;
-      try { json = text ? JSON.parse(text) : null; } catch { json = null; }
-
-      if (!res.ok) {
-        const msg = (json && (json.error || json.message)) ? (json.error || json.message) : (text || ('HTTP ' + res.status));
-        throw new Error(msg);
-      }
-
-      const row = json?.inserted?.[0] || null;
-      const inspNum = row?.inspection_number || json?.inspection_number || null;
-      const inp = document.getElementById('inspectionNumber');
-      if (inp && inspNum) inp.value = String(inspNum);
-
-      alert('Inspection saved!' + (inspNum ? (' #' + inspNum) : ''));
-      setTimeout(() => { window.location.href = 'customerapp.html'; }, 1000);
-    } catch (e) {
-      alert('Submit failed:
-' + (e?.message || e));
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = old; }
-    }
-  };
-
 })();
 </script>
 
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const useLocationBtn = document.getElementById("useLocationBtn");
+  const locationInput = document.getElementById("locationInput");
+  if (!useLocationBtn || !locationInput) return;
+
+  useLocationBtn.addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation not supported.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        locationInput.value = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+      },
+      (err) => {
+        alert("Unable to get current location.");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+});
+</script>
 </body>
 </html>
