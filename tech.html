@@ -856,68 +856,67 @@
 
 })();
 </script>
+
 <script>
-<script>
-
-
-  const res = await fetch("/.netlify/functions/submit-inspection", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      customer_name: customerName,
-      location: location,
-      performed_by: inspectedBy
-    })
-  });
-
-  const text = await res.text().catch(() => "");
-
-  if (!res.ok) {
-    alert("Submit failed:\n" + (text || ("HTTP " + res.status)));
-    return;
-  }
-
-  alert("Inspection saved!");
-}
-</script>
-
-</script>
-<script>
+/* Single, authoritative submit function (global) */
 window.submitInspection = async function () {
   if (!confirm("Submit this inspection now?")) return;
 
-  const customerName = document.getElementById("customerName").value.trim();
-  const location = document.getElementById("locationInput").value.trim();
-  const inspectedBy = document.getElementById("inspectedBy").value.trim();
+  // Uses existing helpers in this file
+  const data = (typeof gatherFormData === "function") ? gatherFormData() : {};
+  const duration_minutes = (typeof getDurationMinutes === "function") ? getDurationMinutes() : 0;
 
-  if (!customerName || !location || !inspectedBy) {
-    alert("Please fill Customer Name, Location, and Inspection performed by.");
-    return;
+  // Build reports (customer + tech) if builders exist
+  const customer_report_html = (typeof buildFullReportDoc === "function") ? buildFullReportDoc(false) : "";
+  const tech_report_html = (typeof buildTechReport === "function") ? buildTechReport(data) : "";
+
+  const btn = document.getElementById("btnSubmitInspection");
+  const oldText = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "Submitting…"; }
+
+  try {
+    const res = await fetch("/.netlify/functions/submit-inspection", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customer_name: (data.customerName || "").trim(),
+        location: (data.location || "").trim(),
+        performed_by: (data.inspectedBy || "").trim(),
+        duration_minutes,
+        customer_report_html,
+        tech_report_html
+      })
+    });
+
+    const text = await res.text().catch(() => "");
+    let json = {};
+    try { json = text ? JSON.parse(text) : {}; } catch { json = { raw: text }; }
+
+    if (!res.ok) {
+      throw new Error(json?.error || json?.details?.message || text || ("HTTP " + res.status));
+    }
+
+    // If your Netlify function returns inserted row, capture inspection number
+    const row = (json.inserted && json.inserted[0]) ? json.inserted[0] : null;
+    const inspNum = row?.inspection_number || json.inspection_number;
+
+    const inp = document.getElementById("inspectionNumber");
+    if (inp && inspNum) inp.value = String(inspNum);
+
+    alert("Inspection saved!" + (inspNum ? (" #" + inspNum) : ""));
+  } catch (err) {
+    alert("Submit failed:\n" + (err?.message || String(err)));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = oldText; }
   }
-
-  const res = await fetch("/.netlify/functions/submit-inspection", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      customer_name: customerName,
-      location: location,
-      performed_by: inspectedBy
-    })
-  });
-
-  if (!res.ok) {
-    alert("Submit failed");
-    return;
-  }
-
-  alert("Inspection saved!");
 };
 </script>
-  <script>
+
+<script>
+/* Location pin button */
 document.addEventListener("DOMContentLoaded", () => {
   const useLocationBtn = document.getElementById("useLocationBtn");
   const locationInput = document.getElementById("locationInput");
-
   if (!useLocationBtn || !locationInput) return;
 
   useLocationBtn.addEventListener("click", () => {
@@ -933,7 +932,8 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       () => {
         alert("Unable to get current location.");
-      }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   });
 });
