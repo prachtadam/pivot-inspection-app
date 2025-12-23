@@ -881,26 +881,40 @@
 })();
 </script>
 <script>
-function submitInspection() {
-  fetch("/.netlify/functions/submit-inspection", {
+<script>
+async function submitInspection() {
+  if (!confirm("Submit this inspection now?")) return;
+
+  const customerName = (document.getElementById("customerName")?.value || "").trim();
+  const location = (document.getElementById("locationInput")?.value || "").trim();
+  const inspectedBy = (document.getElementById("inspectedBy")?.value || "").trim();
+
+  if (!customerName || !location || !inspectedBy) {
+    alert("Please fill Customer Name, Location, and Inspection performed by.");
+    return;
+  }
+
+  const res = await fetch("/.netlify/functions/submit-inspection", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      customer_name: "customerName",
-      location: "location",
-      performed_by: "inspectedBy"
+      customer_name: customerName,
+      location: location,
+      performed_by: inspectedBy
     })
-  })
-    .then(r => r.json())
-    .then(data => {
-      console.log("Saved:", data);
-      alert("Inspection saved!");
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Error saving inspection");
-    });
+  });
+
+  const text = await res.text().catch(() => "");
+
+  if (!res.ok) {
+    alert("Submit failed:\n" + (text || ("HTTP " + res.status)));
+    return;
+  }
+
+  alert("Inspection saved!");
 }
+</script>
+
 </script>
 </body>
 </html>
