@@ -5,35 +5,39 @@ exports.handler = async (event) => {
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
-
-    // Two-bucket support (set these in Netlify env vars)
-    const BUCKET_CUSTOMER = process.env.REPORTS_BUCKET_CUSTOMER || process.env.REPORTS_BUCKET || "inspection-reports";
-    const BUCKET_TECH = process.env.REPORTS_BUCKET_TECH || process.env.REPORTS_BUCKET || "inspection-reports";
-
-    if (!SUPABASE_URL || !SERVICE_KEY) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Missing env vars. Need SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_KEY fallback)." }),
-      };
-    }
+    const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     const body = JSON.parse(event.body || "{}");
     const { inspection_id, kind, filename, contentType, base64 } = body;
 
-    if (!inspection_id || !kind || !filename || !base64) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Missing fields: inspection_id, kind, filename, base64" }) };
+    if (!SUPABASE_URL || !SERVICE_KEY) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" }),
+      };
     }
-    if (kind !== "customer" && kind !== "tech") {
+
+    if (!inspection_id || !kind || !filename || !base64) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Missing one of: inspection_id, kind, filename, base64" }),
+      };
+    }
+
+    const BUCKET_CUSTOMER = process.env.REPORTS_BUCKET_CUSTOMER || "inspection-reports-customer";
+    const BUCKET_TECH = process.env.REPORTS_BUCKET_TECH || "inspection-reports-tech";
+    const bucket = kind === "customer" ? BUCKET_CUSTOMER : kind === "tech" ? BUCKET_TECH : null;
+
+    if (!bucket) {
       return { statusCode: 400, body: JSON.stringify({ error: "kind must be 'customer' or 'tech'" }) };
     }
 
-    const bucket = kind === "customer" ? BUCKET_CUSTOMER : BUCKET_TECH;
     const path = `${inspection_id}/${filename}`;
 
     const bytes = Uint8Array.from(Buffer.from(base64, "base64"));
 
     const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`;
+
     const upRes = await fetch(uploadUrl, {
       method: "POST",
       headers: {
@@ -50,11 +54,9 @@ exports.handler = async (event) => {
       return { statusCode: upRes.status, body: JSON.stringify({ error: "Upload failed", details: upText }) };
     }
 
-    // Update inspections row with the path fields (optional; safe if columns exist)
+    // Optional: store paths back in inspections table if columns exist
     const patch =
-      kind === "customer"
-        ? { customer_report_path: `${bucket}/${path}` }
-        : { tech_report_path: `${bucket}/${path}` };
+      kind === "customer" ? { customer_report_path: path } : { tech_report_path: path };
 
     const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/inspections?id=eq.${inspection_id}`, {
       method: "PATCH",
@@ -69,11 +71,13 @@ exports.handler = async (event) => {
 
     const patchText = await patchRes.text();
     if (!patchRes.ok) {
-      // Don't fail the whole request if patch fails; the file is uploaded.
-      return { statusCode: 200, body: JSON.stringify({ ok: true, uploaded: { bucket, path }, warning: "Uploaded but failed to update inspections row", details: patchText }) };
+      return {
+        statusCode: patchRes.status,
+        body: JSON.stringify({ ok: true, path, warning: "Uploaded but failed to update row", details: patchText }),
+      };
     }
 
-    return { statusCode: 200, body: JSON.stringify({ ok: true, uploaded: { bucket, path } }) };
+    return { statusCode: 200, body: JSON.stringify({ ok: true, bucket, path }) };
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: err?.message || String(err) }) };
   }
