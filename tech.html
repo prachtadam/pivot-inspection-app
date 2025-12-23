@@ -407,13 +407,7 @@
     closeCard();
   });
 
-  useLocationBtn.addEventListener('click',()=>{
-    if(!navigator.geolocation){ alert('Geolocation not supported.'); return; }
-    navigator.geolocation.getCurrentPosition(
-      pos => { const {latitude,longitude}=pos.coords; locationInput.value=`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`; },
-      () => alert('Unable to get current location.')
-    );
-  });
+
 
   function gatherFormData(){
     const data={
@@ -919,5 +913,31 @@ window.submitInspection = async function () {
   alert("Inspection saved!");
 };
 </script>
+  <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const useLocationBtn = document.getElementById("useLocationBtn");
+  const locationInput = document.getElementById("locationInput");
+
+  if (!useLocationBtn || !locationInput) return;
+
+  useLocationBtn.addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation not supported.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        locationInput.value = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+      },
+      () => {
+        alert("Unable to get current location.");
+      }
+    );
+  });
+});
+</script>
+
 </body>
 </html>
