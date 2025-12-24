@@ -592,7 +592,7 @@
   closeReportModalBtn.addEventListener('click', closeReportModal);
   reportModalBackdrop.addEventListener('click',(e)=>{ if(e.target===reportModalBackdrop) closeReportModal(); });
 
-  btnCustomerAll.addEventListener('click',()=>openReportModal('all'));
+  if (btnCustomerAll) btnCustomerAll.addEventListener('click',()=>openReportModal('all'));
   btnCustomerProblems.addEventListener('click',()=>openReportModal('problems'));
 
   btnOpenPrintable.addEventListener('click',()=>{
