@@ -762,6 +762,7 @@
     const worker = html2pdf().from(holder).set(opt).toPdf();
     const pdf = await worker.get("pdf");
     const blob = pdf.output("blob");
+    console.log(blob.size);
     document.body.removeChild(holder);
 
     const ab = await blob.arrayBuffer();
