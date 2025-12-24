@@ -759,7 +759,7 @@
       jsPDF: { unit: "in", format: "letter", orientation: "portrait" }
     };
 
-    const worker = html2pdf().from(holder).set(opt).toPdf();
+    html2pdf().from(holder),set(opt).save();
     const pdf = await worker.get("pdf");
     const blob = pdf.output("blob");
     console.log(blob.size);
