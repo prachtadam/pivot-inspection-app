@@ -162,7 +162,7 @@
   
   <div class="section-card" id="techSubmitCard" style="margin-top:14px;">
   <div style="display:flex;justify-content:center; padding:14px 0;">
-    <button class="btn primary" type="button" id="btnSubmitInspection">Submit Inspection</button>
+    <button class="btn primary" type="button" id="btnSubmitInspection" onclick="submitInspection()">Submit Inspection</button>
   </div>
 </div>
 <!-- Tower template + component card + report modal identical to your working app -->
@@ -790,53 +790,79 @@
     return missing;
   }
 
-  window.submitInspection = async function(){  
-    const missing = [];
-
-  const customer = document.getElementById("customerName")?.value.trim();
-  const location = document.getElementById("locationInput")?.value.trim();
-  const tech = document.getElementById("inspectedBy")?.value.trim();
-
-  if (!customer) missing.push("Customer Name");
-  if (!location) missing.push("Location");
-  if (!tech) missing.push("Inspected By");
-
-  document.querySelectorAll("[data-component]").forEach(btn => {
-    if (!btn.dataset.status) {
-      missing.push("All tower components must be checked");
+  window.submitInspection = async function(){
+    const missing = _missingFields();
+    if(missing.length){
+      alert("You missed:\n\n- " + missing.join("\n- "));
+      return;
     }
-  });
+    if(!confirm("Submit this inspection now?")) return;
 
-  if (missing.length) {
-    alert("Missing:\n• " + [...new Set(missing)].join("\n• "));
-    return;
-  }
+    const data = gatherFormData();
 
-  if (!confirm("Are you sure you want to submit this inspection?")) return;
+    const btn = document.getElementById("btnSubmitInspection");
+    const old = btn?.textContent;
+    if(btn){ btn.disabled=true; btn.textContent="Submitting…"; }
 
-  try {
-    const res = await fetch("/.netlify/functions/submit-inspection", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customer_name: customer,
-        location,
-        performed_by: tech
-      })
-    });
+    try{
+      const res = await fetch("/.netlify/functions/submit-inspection",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          customer_name: data.customerName,
+          location: data.location,
+          performed_by: data.inspectedBy,
+          duration_minutes: 0
+        })
+      });
+      const json = await res.json().catch(()=>null);
+      if(!res.ok) throw new Error(json?.error || ("HTTP "+res.status));
 
-    if (!res.ok) throw new Error("Submit failed");
+      const row = json?.inserted?.[0];
+      const inspId = row?.id;
+      const inspNum = row?.inspection_number;
 
-    alert("Inspection submitted successfully");
-  } catch (err) {
-    alert("Submit failed");
-  }
-}
+      const customerDoc = buildFullReportDoc(false);
+      const techDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"/></head><body style="background:#fff;padding:16px;">${buildTechReportHtml()}</body></html>`;
+
+      const fileBaseCustomer = `${_sanitizeFilePart(data.customerName)}-${_sanitizeFilePart(data.location)}-customerreport`;
+      const fileBaseTech = `${_sanitizeFilePart(data.customerName)}-${_sanitizeFilePart(data.location)}-techrpt`;
+
+      const custB64 = await _htmlToPdfBase64(customerDoc, fileBaseCustomer);
+      const techB64 = await _htmlToPdfBase64(techDoc, fileBaseTech);
+
+      await fetch("/.netlify/functions/upload-report",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          inspection_id: inspId,
+          kind: "customer",
+          filename: `${fileBaseCustomer}.pdf`,
+          base64: custB64
+        })
+      });
+
+      await fetch("/.netlify/functions/upload-report",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          inspection_id: inspId,
+          kind: "tech",
+          filename: `${fileBaseTech}.pdf`,
+          base64: techB64
+        })
+      });
+
+      alert(`Inspection saved! #${inspNum||""}`);
+    }catch(err){
+      alert("Submit failed:\n" + (err?.message || String(err)));
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent=old; }
+    }
   };
-document.getElementById("btnSubmitInspection").addEventListener("click",()=>{
-  submitInspection();
-});
+
 })();
 </script>
 </body>
 </html>
+
