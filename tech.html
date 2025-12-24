@@ -760,7 +760,6 @@
     };
 
     html2pdf().from(holder).save();
-    const pdf = await worker.get("pdf");
     const blob = pdf.output("blob");
     console.log(blob.size);
     document.body.removeChild(holder);
