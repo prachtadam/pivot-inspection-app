@@ -555,8 +555,8 @@
         html += `<table class="report-table">
           <tr><th>Component</th><th>Condition</th><th>Status</th><th>Details</th></tr>`;
         keys.forEach(k=>{
-          const c=comps[k]; if(!c) return;
-          if(includeProblemsOnly && c.status==='good') return;
+          const c=comps[k]; if(!c) return ' ';
+          if(includeProblemsOnly && c.status==='good') return ' ';
           const name=componentConfigs[k]?.label||k;
           const st=c.status||'good';
           const pillClass = st==='good'?'pill-good':(st==='warning'?'pill-warn':'pill-bad');
