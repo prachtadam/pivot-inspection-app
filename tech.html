@@ -103,15 +103,18 @@
   @media print{*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;} .status-pill{background-clip:padding-box !important;box-shadow:none !important;}}
   @media (max-width:480px){body{padding:12px;} .section-card{padding:10px 12px;} .btn{width:100%;} .report-actions{justify-content:stretch;}}
 
-/* TECH APP style tweaks */
-.section-card{ background:#2b2f36 !important; }
-.section-title{ background:#0b2a5b !important; color:#ffffff !important; padding:12px 14px !important; border-radius:12px 12px 0 0 !important; }
-.section-card.tower-section{ padding-top:0 !important; }
+  /* Tech-only styling polish */
+  body{background:#e6e6e6;}
+  .section-card{background:#f7f7f7;}
+  .section-title{background:#0b2a4a !important;color:#fff !important;padding:10px 12px;border-radius:12px 12px 0 0;}
+  .tower-section .section-title{margin:-12px -12px 12px -12px;}
+  .tower-extras select{border:2px solid #ced4da;}
+
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>Pivot Inspection (tech access)</h1>
+  <h1>Pivot Inspection (Customer)</h1>
 
   <div class="section-card">
     <div class="section-title">General Information</div>
@@ -157,15 +160,20 @@
   <div id="towersContainer"></div>
 
   
-  <div class="section-card" id="submitSection">
-    <div style="text-align:center; padding-top:6px;">
+  <div class="section-card" id="techSubmitCard" style="margin-top:14px;">
+    <div style="text-align:center; padding:10px 0;">
       <button class="btn primary" type="button" id="btnSubmitInspection" onclick="submitInspection()">Submit Inspection</button>
+    </div>
+  </div>
+<div class="section-card">
+    <div class="report-actions">
+      <button class="btn" type="button" id="btnCustomerAll">Customer Report – All Towers</button>
+      <button class="btn" type="button" id="btnCustomerProblems">Customer Report – Problem Towers Only</button>
     </div>
   </div>
 </div>
 
 <!-- Tower template + component card + report modal identical to your working app -->
- + component card + report modal identical to your working app -->
 <!-- To keep this message readable, I’m using the same tower template and JS logic as your working file. -->
 <!-- ✅ IMPORTANT: You already have these working. We will not alter tower positions. -->
 
@@ -193,30 +201,30 @@
       </div>
     </div>
 
-    
-    <div class="tech-two" style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-      <div>
+    <div class="tower-extras" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+      <div style="flex:1;min-width:220px;">
         <label>Tower Boot</label>
         <select class="tower-boot">
-          <option value="">— Select —</option>
+          <option value="">Select…</option>
           <option value="good">Good</option>
           <option value="cracking">Cracking</option>
           <option value="replace">Replace</option>
         </select>
       </div>
-      <div>
+      <div style="flex:1;min-width:260px;">
         <label>Tower Box</label>
         <select class="tower-box">
-          <option value="">— Select —</option>
+          <option value="">Select…</option>
           <option value="good">Good</option>
-          <option value="contactor">Replace Contactor &amp; Micro-switch</option>
-          <option value="cracked">Cracked Lid</option>
+          <option value="replace_contactor_micro">Replace Contactor &amp; Micro-switch</option>
+          <option value="cracked_lid">Cracked Lid</option>
           <option value="replace">Replace</option>
         </select>
       </div>
     </div>
 
-<div style="margin-top:10px;">
+
+    <div style="margin-top:10px;">
       <label>Tower Comments / Notes</label>
       <textarea class="tower-comment"></textarea>
     </div>
@@ -580,210 +588,7 @@
   function buildFullReportDoc(includeProblemsOnly){
     const css=document.querySelector('style')?.innerHTML||'';
     const body=buildCustomerReportHtml(includeProblemsOnly);
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Pivot Inspection Report</title><style>${css}</style></head><body style="background:#fff;padding:16px;">${body}<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
-  // ---- TECH APP additions: Tower Boot / Tower Box + Submit ----
-  function _towerBootToStatus(val){
-    if(val === 'good') return {label:'Good', status:'good'};
-    if(val === 'cracking') return {label:'Cracking', status:'warning'};
-    if(val === 'replace') return {label:'Replace', status:'bad'};
-    return {label:'—', status:''};
-  }
-  function _towerBoxToStatus(val){
-    if(val === 'good') return {label:'Good', status:'good'};
-    if(val === 'contactor') return {label:'Replace Contactor & Micro-switch', status:'warning'};
-    if(val === 'cracked') return {label:'Cracked Lid', status:'warning'};
-    if(val === 'replace') return {label:'Replace', status:'bad'};
-    return {label:'—', status:''};
-  }
-
-  // Hook tower boot/box selects when towers are added
-  const _origAddTower = addTower;
-  addTower = function(){
-    _origAddTower();
-    const sections = Array.from(towersContainer.querySelectorAll('.tower-section'));
-    const section = sections[sections.length-1];
-    const towerId = section.dataset.towerId;
-
-    // ensure tower meta container
-    if(!selections[towerId]) selections[towerId] = {};
-
-    const bootSel = section.querySelector('.tower-boot');
-    const boxSel  = section.querySelector('.tower-box');
-
-    const applyBoot = () => {
-      const m = _towerBootToStatus(bootSel.value);
-      selections[towerId].towerBoot = { value: bootSel.value, label: m.label, status: m.status };
-      // color highlight
-      bootSel.style.borderColor = (m.status==='bad') ? '#ef4444' : (m.status==='warning') ? '#f59e0b' : (m.status==='good') ? '#22c55e' : '';
-    };
-    const applyBox = () => {
-      const m = _towerBoxToStatus(boxSel.value);
-      selections[towerId].towerBox = { value: boxSel.value, label: m.label, status: m.status };
-      boxSel.style.borderColor = (m.status==='bad') ? '#ef4444' : (m.status==='warning') ? '#f59e0b' : (m.status==='good') ? '#22c55e' : '';
-    };
-
-    bootSel.addEventListener('change', applyBoot);
-    boxSel.addEventListener('change', applyBox);
-
-    applyBoot();
-    applyBox();
-  };
-
-  function buildTechReportHtml(){
-    const data = gatherFormData();
-    const tIds = Object.keys(selections).sort((a,b)=>Number(a)-Number(b));
-    let out = `
-      <div style="font-family:Arial,sans-serif;color:#0f172a">
-        <div style="border-bottom:2px solid #e5e7eb;padding-bottom:10px;margin-bottom:12px">
-          <div style="font-size:20px;font-weight:900">Pivot Inspection – Tech Report</div>
-          <div style="margin-top:6px;font-size:13px">
-            <div><b>Customer:</b> ${escapeHtml(data.customerName)}</div>
-            <div><b>Field Name:</b> ${escapeHtml(data.fieldName)}</div>
-            <div><b>Location:</b> ${escapeHtml(data.location)}</div>
-            <div><b>Performed By:</b> ${escapeHtml(data.inspectedBy)}</div>
-            <div><b>Date:</b> ${escapeHtml(data.inspectionDate)}</div>
-          </div>
-        </div>
-    `;
-    tIds.forEach(tid=>{
-      out += `<div style="margin-top:10px;font-weight:900">Tower ${tid}</div>`;
-      const sel = selections[tid] || {};
-      // Tower Boot/Box first
-      if(sel.towerBoot){
-        out += _techLine('Tower Boot', sel.towerBoot.label, sel.towerBoot.status);
-      }
-      if(sel.towerBox){
-        out += _techLine('Tower Box', sel.towerBox.label, sel.towerBox.status);
-      }
-
-      Object.keys(sel).forEach(compId=>{
-        if(compId==='towerBoot' || compId==='towerBox') return;
-        const v = sel[compId];
-        if(!v) return;
-        out += _techLine(v.label || compId, v.choiceLabel || v.choice || '', v.status || '');
-      });
-
-      const note = (towerNotes[tid] || '').trim();
-      if(note) out += `<div style="margin:6px 0 0;color:#475569"><b>Tower notes:</b> ${escapeHtml(note)}</div>`;
-    });
-
-    out += `</div>`;
-    return out;
-  }
-
-  function _techLine(label, value, status){
-    const color = status==='bad' ? '#dc2626' : status==='warning' ? '#d97706' : status==='good' ? '#16a34a' : '#334155';
-    return `<div style="margin:4px 0"><span style="font-weight:700">${escapeHtml(label)}:</span> <span style="color:${color}">${escapeHtml(value||'')}</span></div>`;
-  }
-
-  // Minimal PDF creation + upload using upload-report function
-  async function _htmlToPdfBase64(html, filenameBase){
-    const holder = document.createElement('div');
-    holder.style.position='fixed';
-    holder.style.left='-10000px';
-    holder.style.top='0';
-    holder.style.width='800px';
-    holder.innerHTML=html;
-    document.body.appendChild(holder);
-
-    const opt = { margin: 0.4, filename: filenameBase+'.pdf', html2canvas:{scale:2}, jsPDF:{unit:'in',format:'letter',orientation:'portrait'} };
-    const worker = html2pdf().from(holder).set(opt).toPdf();
-    const pdf = await worker.get('pdf');
-    const blob = pdf.output('blob');
-
-    document.body.removeChild(holder);
-
-    const ab = await blob.arrayBuffer();
-    let binary='';
-    const bytes=new Uint8Array(ab);
-    const chunk=0x8000;
-    for(let i=0;i<bytes.length;i+=chunk){
-      binary += String.fromCharCode.apply(null, bytes.subarray(i,i+chunk));
-    }
-    return btoa(binary);
-  }
-
-  window.submitInspection = async function(){
-    const missing = [];
-    const data = gatherFormData();
-
-    if(!data.customerName) missing.push('Customer Name');
-    if(!data.fieldName) missing.push('Field Name');
-    if(!data.location) missing.push('Location');
-    if(!data.inspectedBy) missing.push('Inspection Performed By');
-    if(!data.inspectionDate) missing.push('Date of Inspection');
-
-    // Tower boot/box required per tower
-    const tSections = Array.from(towersContainer.querySelectorAll('.tower-section'));
-    tSections.forEach(sec=>{
-      const tid = sec.dataset.towerId;
-      const boot = sec.querySelector('.tower-boot')?.value || '';
-      const box  = sec.querySelector('.tower-box')?.value || '';
-      if(!boot) missing.push(`Tower ${tid}: Tower Boot`);
-      if(!box)  missing.push(`Tower ${tid}: Tower Box`);
-    });
-
-    if(missing.length){
-      alert('You missed:\n- ' + missing.join('\n- '));
-      return;
-    }
-
-    if(!confirm('Submit this inspection now?')) return;
-
-    // insert row first
-    const res = await fetch('/.netlify/functions/submit-inspection', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        customer_name: data.customerName,
-        location: data.location,
-        performed_by: data.inspectedBy,
-        duration_minutes: 0
-      })
-    });
-
-    const json = await res.json().catch(()=>null);
-    if(!res.ok){
-      alert('Submit failed:\n' + (json ? JSON.stringify(json) : ('HTTP '+res.status)));
-      return;
-    }
-
-    const row = json?.inserted?.[0];
-    const inspectionId = row?.id;
-    const inspectionNumber = row?.inspection_number;
-
-    // Build report HTML
-    const customerHtml = buildCustomerReportHtml(false); // all towers with pills
-    const techHtml = buildTechReportHtml();
-
-    // Generate PDFs and upload
-    if(inspectionId){
-      const safeCustomer = (data.customerName||'customer').replaceAll(' ','_');
-      const safeField = (data.fieldName||'field').replaceAll(' ','_');
-
-      const custFilename = `${safeCustomer}-${safeField}-customerreport.pdf`;
-      const techFilename = `${safeCustomer}-${safeField}-techrpt.pdf`;
-
-      const custB64 = await _htmlToPdfBase64(customerHtml, 'CustomerReport');
-      await fetch('/.netlify/functions/upload-report', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ inspection_id: inspectionId, kind:'customer', filename: custFilename, contentType:'application/pdf', base64: custB64 })
-      }).catch(()=>{});
-
-      const techB64 = await _htmlToPdfBase64(techHtml, 'TechReport');
-      await fetch('/.netlify/functions/upload-report', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ inspection_id: inspectionId, kind:'tech', filename: techFilename, contentType:'application/pdf', base64: techB64 })
-      }).catch(()=>{});
-    }
-
-    alert('Inspection saved!' + (inspectionNumber ? (' #' + inspectionNumber) : ''));
-  };
-
-</script>
-</body></html>`;
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Pivot Inspection Report</title><style>${css}</style></head><body style="background:#fff;padding:16px;">${body}</body></html>`;
   }
 
   function openReportModal(mode){
@@ -844,55 +649,55 @@
   });
 
   window.addEventListener('load', updateTowerScale);
-})();
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
-  // ---- TECH APP additions: Tower Boot / Tower Box + Submit ----
-  function _towerBootToStatus(val){
-    if(val === 'good') return {label:'Good', status:'good'};
-    if(val === 'cracking') return {label:'Cracking', status:'warning'};
-    if(val === 'replace') return {label:'Replace', status:'bad'};
-    return {label:'—', status:''};
+
+  // ===== TECH APP ADDITIONS =====
+  const towerExtras = {}; // { towerId: { bootValue, bootLabel, bootStatus, boxValue, boxLabel, boxStatus } }
+
+  function _bootMeta(val){
+    if(val==="good") return {label:"Good", status:"good"};
+    if(val==="cracking") return {label:"Cracking", status:"warning"};
+    if(val==="replace") return {label:"Replace", status:"bad"};
+    return {label:"", status:""};
   }
-  function _towerBoxToStatus(val){
-    if(val === 'good') return {label:'Good', status:'good'};
-    if(val === 'contactor') return {label:'Replace Contactor & Micro-switch', status:'warning'};
-    if(val === 'cracked') return {label:'Cracked Lid', status:'warning'};
-    if(val === 'replace') return {label:'Replace', status:'bad'};
-    return {label:'—', status:''};
+  function _boxMeta(val){
+    if(val==="good") return {label:"Good", status:"good"};
+    if(val==="replace_contactor_micro") return {label:"Replace Contactor & Micro-switch", status:"warning"};
+    if(val==="cracked_lid") return {label:"Cracked Lid", status:"warning"};
+    if(val==="replace") return {label:"Replace", status:"bad"};
+    return {label:"", status:""};
+  }
+  function _applySelectColor(sel, status){
+    sel.style.borderColor = status==="bad" ? "#f44336" : status==="warning" ? "#ffc107" : status==="good" ? "#4caf50" : "#ced4da";
   }
 
-  // Hook tower boot/box selects when towers are added
-  const _origAddTower = addTower;
-  addTower = function(){
-    _origAddTower();
-    const sections = Array.from(towersContainer.querySelectorAll('.tower-section'));
-    const section = sections[sections.length-1];
-    const towerId = section.dataset.towerId;
-
-    // ensure tower meta container
-    if(!selections[towerId]) selections[towerId] = {};
-
-    const bootSel = section.querySelector('.tower-boot');
-    const boxSel  = section.querySelector('.tower-box');
-
-    const applyBoot = () => {
-      const m = _towerBootToStatus(bootSel.value);
-      selections[towerId].towerBoot = { value: bootSel.value, label: m.label, status: m.status };
-      // color highlight
-      bootSel.style.borderColor = (m.status==='bad') ? '#ef4444' : (m.status==='warning') ? '#f59e0b' : (m.status==='good') ? '#22c55e' : '';
-    };
-    const applyBox = () => {
-      const m = _towerBoxToStatus(boxSel.value);
-      selections[towerId].towerBox = { value: boxSel.value, label: m.label, status: m.status };
-      boxSel.style.borderColor = (m.status==='bad') ? '#ef4444' : (m.status==='warning') ? '#f59e0b' : (m.status==='good') ? '#22c55e' : '';
-    };
-
-    bootSel.addEventListener('change', applyBoot);
-    boxSel.addEventListener('change', applyBox);
-
-    applyBoot();
-    applyBox();
+  // When a tower card is created, wire Tower Boot/Box selects
+  const _origCloneTower = cloneTowerSection;
+  cloneTowerSection = function(){
+    const el = _origCloneTower.apply(this, arguments);
+    try{
+      const towerId = el.getAttribute("data-tower-id") || el.dataset.towerId || String(el.querySelector(".tower-number")?.textContent||"");
+      const bootSel = el.querySelector("select.tower-boot");
+      const boxSel  = el.querySelector("select.tower-box");
+      if(towerId && bootSel && boxSel){
+        if(!towerExtras[towerId]) towerExtras[towerId] = {};
+        const apply = () => {
+          const b=_bootMeta(bootSel.value);
+          const x=_boxMeta(boxSel.value);
+          towerExtras[towerId].bootValue = bootSel.value;
+          towerExtras[towerId].bootLabel = b.label;
+          towerExtras[towerId].bootStatus = b.status;
+          towerExtras[towerId].boxValue = boxSel.value;
+          towerExtras[towerId].boxLabel = x.label;
+          towerExtras[towerId].boxStatus = x.status;
+          _applySelectColor(bootSel, b.status);
+          _applySelectColor(boxSel, x.status);
+        };
+        bootSel.addEventListener("change", apply);
+        boxSel.addEventListener("change", apply);
+        apply();
+      }
+    }catch(e){}
+    return el;
   };
 
   function buildTechReportHtml(){
@@ -904,32 +709,26 @@
           <div style="font-size:20px;font-weight:900">Pivot Inspection – Tech Report</div>
           <div style="margin-top:6px;font-size:13px">
             <div><b>Customer:</b> ${escapeHtml(data.customerName)}</div>
-            <div><b>Field Name:</b> ${escapeHtml(data.fieldName)}</div>
             <div><b>Location:</b> ${escapeHtml(data.location)}</div>
             <div><b>Performed By:</b> ${escapeHtml(data.inspectedBy)}</div>
-            <div><b>Date:</b> ${escapeHtml(data.inspectionDate)}</div>
+            <div><b>Date:</b> ${escapeHtml(data.inspectionDate||'')}</div>
           </div>
         </div>
     `;
     tIds.forEach(tid=>{
       out += `<div style="margin-top:10px;font-weight:900">Tower ${tid}</div>`;
-      const sel = selections[tid] || {};
-      // Tower Boot/Box first
-      if(sel.towerBoot){
-        out += _techLine('Tower Boot', sel.towerBoot.label, sel.towerBoot.status);
-      }
-      if(sel.towerBox){
-        out += _techLine('Tower Box', sel.towerBox.label, sel.towerBox.status);
-      }
+      const ex = towerExtras[tid] || {};
+      if(ex.bootLabel) out += _techLine("Tower Boot", ex.bootLabel, ex.bootStatus);
+      if(ex.boxLabel)  out += _techLine("Tower Box", ex.boxLabel, ex.boxStatus);
 
+      const sel = selections[tid] || {};
       Object.keys(sel).forEach(compId=>{
-        if(compId==='towerBoot' || compId==='towerBox') return;
         const v = sel[compId];
         if(!v) return;
-        out += _techLine(v.label || compId, v.choiceLabel || v.choice || '', v.status || '');
+        out += _techLine(v.label || compId, v.choiceLabel || v.choice || "", v.status || "");
       });
 
-      const note = (towerNotes[tid] || '').trim();
+      const note = (towerNotes?.[tid] || "").trim();
       if(note) out += `<div style="margin:6px 0 0;color:#475569"><b>Tower notes:</b> ${escapeHtml(note)}</div>`;
     });
 
@@ -938,29 +737,41 @@
   }
 
   function _techLine(label, value, status){
-    const color = status==='bad' ? '#dc2626' : status==='warning' ? '#d97706' : status==='good' ? '#16a34a' : '#334155';
+    const color = status==="bad" ? "#dc2626" : status==="warning" ? "#d97706" : status==="good" ? "#16a34a" : "#334155";
     return `<div style="margin:4px 0"><span style="font-weight:700">${escapeHtml(label)}:</span> <span style="color:${color}">${escapeHtml(value||'')}</span></div>`;
   }
 
-  // Minimal PDF creation + upload using upload-report function
+  function _sanitizeFilePart(s){
+    return (s||"")
+      .toString()
+      .trim()
+      .replace(/\s+/g,"_")
+      .replace(/[^a-zA-Z0-9_\-]/g,"");
+  }
+
   async function _htmlToPdfBase64(html, filenameBase){
-    const holder = document.createElement('div');
-    holder.style.position='fixed';
-    holder.style.left='-10000px';
-    holder.style.top='0';
-    holder.style.width='800px';
-    holder.innerHTML=html;
+    const holder = document.createElement("div");
+    holder.style.position="fixed";
+    holder.style.left="-10000px";
+    holder.style.top="0";
+    holder.style.width="800px";
+    holder.innerHTML = html;
     document.body.appendChild(holder);
 
-    const opt = { margin: 0.4, filename: filenameBase+'.pdf', html2canvas:{scale:2}, jsPDF:{unit:'in',format:'letter',orientation:'portrait'} };
-    const worker = html2pdf().from(holder).set(opt).toPdf();
-    const pdf = await worker.get('pdf');
-    const blob = pdf.output('blob');
+    const opt = {
+      margin: 0.4,
+      filename: `${filenameBase}.pdf`,
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: "in", format: "letter", orientation: "portrait" }
+    };
 
+    const worker = html2pdf().from(holder).set(opt).toPdf();
+    const pdf = await worker.get("pdf");
+    const blob = pdf.output("blob");
     document.body.removeChild(holder);
 
     const ab = await blob.arrayBuffer();
-    let binary='';
+    let binary="";
     const bytes=new Uint8Array(ab);
     const chunk=0x8000;
     for(let i=0;i<bytes.length;i+=chunk){
@@ -969,85 +780,96 @@
     return btoa(binary);
   }
 
-  window.submitInspection = async function(){
+  function _missingFields(){
     const missing = [];
     const data = gatherFormData();
 
-    if(!data.customerName) missing.push('Customer Name');
-    if(!data.fieldName) missing.push('Field Name');
-    if(!data.location) missing.push('Location');
-    if(!data.inspectedBy) missing.push('Inspection Performed By');
-    if(!data.inspectionDate) missing.push('Date of Inspection');
+    if(!data.customerName) missing.push("Customer Name");
+    if(!data.location) missing.push("Location");
+    if(!data.inspectedBy) missing.push("Performed By");
 
-    // Tower boot/box required per tower
-    const tSections = Array.from(towersContainer.querySelectorAll('.tower-section'));
-    tSections.forEach(sec=>{
-      const tid = sec.dataset.towerId;
-      const boot = sec.querySelector('.tower-boot')?.value || '';
-      const box  = sec.querySelector('.tower-box')?.value || '';
-      if(!boot) missing.push(`Tower ${tid}: Tower Boot`);
-      if(!box)  missing.push(`Tower ${tid}: Tower Box`);
+    const tIds = Array.from(document.querySelectorAll(".tower-section")).map(s => s.querySelector(".tower-number")?.textContent?.trim()).filter(Boolean);
+    tIds.forEach(tid=>{
+      const ex = towerExtras[tid] || {};
+      if(!ex.bootValue) missing.push(`Tower ${tid}: Tower Boot`);
+      if(!ex.boxValue)  missing.push(`Tower ${tid}: Tower Box`);
     });
 
+    return missing;
+  }
+
+  window.submitInspection = async function(){
+    const missing = _missingFields();
     if(missing.length){
-      alert('You missed:\n- ' + missing.join('\n- '));
+      alert("You missed:\n\n- " + missing.join("\n- "));
       return;
     }
+    if(!confirm("Submit this inspection now?")) return;
 
-    if(!confirm('Submit this inspection now?')) return;
+    const data = gatherFormData();
 
-    // insert row first
-    const res = await fetch('/.netlify/functions/submit-inspection', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        customer_name: data.customerName,
-        location: data.location,
-        performed_by: data.inspectedBy,
-        duration_minutes: 0
-      })
-    });
+    const btn = document.getElementById("btnSubmitInspection");
+    const old = btn?.textContent;
+    if(btn){ btn.disabled=true; btn.textContent="Submitting…"; }
 
-    const json = await res.json().catch(()=>null);
-    if(!res.ok){
-      alert('Submit failed:\n' + (json ? JSON.stringify(json) : ('HTTP '+res.status)));
-      return;
+    try{
+      const res = await fetch("/.netlify/functions/submit-inspection",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          customer_name: data.customerName,
+          location: data.location,
+          performed_by: data.inspectedBy,
+          duration_minutes: 0
+        })
+      });
+      const json = await res.json().catch(()=>null);
+      if(!res.ok) throw new Error(json?.error || ("HTTP "+res.status));
+
+      const row = json?.inserted?.[0];
+      const inspId = row?.id;
+      const inspNum = row?.inspection_number;
+
+      const customerDoc = buildFullReportDoc(false);
+      const techDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"/></head><body style="background:#fff;padding:16px;">${buildTechReportHtml()}</body></html>`;
+
+      const fileBaseCustomer = `${_sanitizeFilePart(data.customerName)}-${_sanitizeFilePart(data.location)}-customerreport`;
+      const fileBaseTech = `${_sanitizeFilePart(data.customerName)}-${_sanitizeFilePart(data.location)}-techrpt`;
+
+      const custB64 = await _htmlToPdfBase64(customerDoc, fileBaseCustomer);
+      const techB64 = await _htmlToPdfBase64(techDoc, fileBaseTech);
+
+      await fetch("/.netlify/functions/upload-report",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          inspection_id: inspId,
+          kind: "customer",
+          filename: `${fileBaseCustomer}.pdf`,
+          base64: custB64
+        })
+      });
+
+      await fetch("/.netlify/functions/upload-report",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          inspection_id: inspId,
+          kind: "tech",
+          filename: `${fileBaseTech}.pdf`,
+          base64: techB64
+        })
+      });
+
+      alert(`Inspection saved! #${inspNum||""}`);
+    }catch(err){
+      alert("Submit failed:\n" + (err?.message || String(err)));
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent=old; }
     }
-
-    const row = json?.inserted?.[0];
-    const inspectionId = row?.id;
-    const inspectionNumber = row?.inspection_number;
-
-    // Build report HTML
-    const customerHtml = buildCustomerReportHtml(false); // all towers with pills
-    const techHtml = buildTechReportHtml();
-
-    // Generate PDFs and upload
-    if(inspectionId){
-      const safeCustomer = (data.customerName||'customer').replaceAll(' ','_');
-      const safeField = (data.fieldName||'field').replaceAll(' ','_');
-
-      const custFilename = `${safeCustomer}-${safeField}-customerreport.pdf`;
-      const techFilename = `${safeCustomer}-${safeField}-techrpt.pdf`;
-
-      const custB64 = await _htmlToPdfBase64(customerHtml, 'CustomerReport');
-      await fetch('/.netlify/functions/upload-report', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ inspection_id: inspectionId, kind:'customer', filename: custFilename, contentType:'application/pdf', base64: custB64 })
-      }).catch(()=>{});
-
-      const techB64 = await _htmlToPdfBase64(techHtml, 'TechReport');
-      await fetch('/.netlify/functions/upload-report', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ inspection_id: inspectionId, kind:'tech', filename: techFilename, contentType:'application/pdf', base64: techB64 })
-      }).catch(()=>{});
-    }
-
-    alert('Inspection saved!' + (inspectionNumber ? (' #' + inspectionNumber) : ''));
   };
 
+})();
 </script>
 </body>
 </html>
