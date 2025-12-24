@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Pivot Inspection (tech access)</title>
+<title>Tech Inspection</title>
 <style>
   :root {
     --brand: #1865ab;
@@ -114,7 +114,7 @@
 </head>
 <body>
 <div class="container">
-  <h1>Pivot Inspection (Customer)</h1>
+  <h1>Tech Inspection</h1>
 
   <div class="section-card">
     <div class="section-title">General Information</div>
@@ -161,18 +161,10 @@
 
   
   <div class="section-card" id="techSubmitCard" style="margin-top:14px;">
-    <div style="text-align:center; padding:10px 0;">
-      <button class="btn primary" type="button" id="btnSubmitInspection" onclick="submitInspection()">Submit Inspection</button>
-    </div>
-  </div>
-<div class="section-card">
-    <div class="report-actions">
-      <button class="btn" type="button" id="btnCustomerAll">Customer Report – All Towers</button>
-      <button class="btn" type="button" id="btnCustomerProblems">Customer Report – Problem Towers Only</button>
-    </div>
+  <div style="display:flex;justify-content:center; padding:14px 0;">
+    <button class="btn primary" type="button" id="btnSubmitInspection" onclick="submitInspection()">Submit Inspection</button>
   </div>
 </div>
-
 <!-- Tower template + component card + report modal identical to your working app -->
 <!-- To keep this message readable, I’m using the same tower template and JS logic as your working file. -->
 <!-- ✅ IMPORTANT: You already have these working. We will not alter tower positions. -->
