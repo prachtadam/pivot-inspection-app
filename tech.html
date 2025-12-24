@@ -663,7 +663,7 @@
   }
 
   // When a tower card is created, wire Tower Boot/Box selects
-  const _origCloneTower = cloneTowerSection;
+  const _origCloneTower = (typeof cloneTowerSection==="function") ? cloneTowerSection: null;
   cloneTowerSection = function(){
     const el = _origCloneTower.apply(this, arguments);
     try{
