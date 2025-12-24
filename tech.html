@@ -542,7 +542,7 @@
       const comps=tower.components||{};
       const keys=Object.keys(comps);
       const hasProblem=keys.some(k => (comps[k]?.status||'good')!=='good');
-      if(includeProblemsOnly && !hasProblem) return;
+      if(includeProblemsOnly && !hasProblem) return ' ';
 
       html += `<div class="tower-card">
         <div class="tower-header-report">Tower ${tower.id}</div>
